@@ -1,0 +1,42 @@
+name: Deploy Enterprise Lab
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. เช็กโค้ด
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. ส่งไฟล์ขึ้น Server (เฉพาะไฟล์ที่จำเป็น)
+      - name: Copy files to Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml,Dockerfile,package.json,server.js"
+          target: "/home/ubuntu/enterprise-lab"
+
+      # 3. SSH ไปสั่งงาน (Build & Run & Clean)
+      - name: Deploy on AWS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/enterprise-lab
+            
+            # สั่งหยุดของเก่าก่อน
+            docker-compose down || true
+            
+            # Build และ Run ใหม่
+            docker-compose up -d --build
+            
+            # 🧹 Big Cleaning: ลบ Image ที่ไม่ใช้ทิ้งทันทีหลังรันเสร็จ (สำคัญมาก!)
+            docker image prune -f
