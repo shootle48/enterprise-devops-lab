@@ -4,7 +4,7 @@ services:
   api:
     build: .
     ports:
-      - "3000:3000"
+      - "3002:3002"
     environment:
       - MONGO_URL=mongodb://mongo_db:27017/logs_db
     depends_on:
